@@ -1,0 +1,84 @@
+#!/bin/sh
+
+jname="Thomas E. Vaughan's Journal"  # Name of journal.
+
+# Construct log file for current day if it yet not exist.  In any event, edit
+# that log file.
+
+y=`date +%Y`  # year       (as in 2016)
+m=`date +%b`  # month      (as in Mar)
+dn=`date +%d` # day number (as in 01)
+ds=`date +%a` # day string (as in Mon)
+
+ifile="index.rst"  # Path to top-level index.
+ydir="$y"          # Path to directory for current year.
+yfile="$ydir/$y.rst"      # Path to index for current year.
+mdir="$ydir/$m"           # Path to directory for current month.
+mfile="$mdir/$m.rst"      # Path to index for current month.
+dfile="$mdir/$dn.rst"     # Path to log for current day.
+
+mkdir -p "$mdir"  # Make sure that directory for current month exists.
+
+# Do not rely on shell's built-in echo, which might not interpret the '-e'
+# argument as enabling printf-style escapes.
+#
+# When reading lines that use $ECHO below, remember that echo (and therefore
+# $ECHO) implicitly adds an extra new line at the very end of the echoed
+# string. So when a string ends with no '\n', there is still a newline emitted,
+# and when a string ends with '\n', there are two newlines emitted.
+#
+ECHO=/bin/echo
+
+# Make sure that top-level index exists.
+if ! test -f "$ifile"; then
+   # Top-level index does not yet exist. Start new one.
+   "$ECHO" -e ".. $jname top-level index file\n"            >  "$ifile"
+   "$ECHO" -e "$jname\n`echo \"$jname\" | sed 's/./=/g'`\n" >> "$ifile"
+   "$ECHO" -e '* :ref:`search`'"\n"                         >> "$ifile"
+   "$ECHO" -e "Contents:\n"                                 >> "$ifile"
+   "$ECHO" -e ".. toctree::\n   :maxdepth: 2\n"             >> "$ifile"
+   git add "$ifile"
+fi
+
+# Make sure that link to current year's index exists in top-level index.
+if ! grep "$y/$y.rst" "$ifile" > /dev/null; then
+   # No link to current year's index exists. Add link.
+   "$ECHO" -e "   $y/$y.rst" >> "$ifile"
+fi
+
+# Make sure that current year's index exists.
+if ! test -f "$yfile"; then
+   # Current year's index does not yet exist. Start a new one.
+   "$ECHO" -e "\n$y\n====\n\n.. toctree::\n" > "$yfile"
+   git add "$yfile"
+fi
+
+# Make sure that link to current month's index exists in current year's index.
+if ! grep "$m/$m.rst" "$yfile" > /dev/null; then
+   # No link to current month's index exists. Add link.
+   "$ECHO" -e "   $m/$m.rst" >> "$yfile"
+fi
+
+# Make sure that index for current month exists.
+if ! test -f "$mfile"; then
+   # Month index does not yet exist. Start new one for current month.
+   "$ECHO" -e "\n$m\n---\n\n.. toctree::\n" > "$mfile"
+   git add "$mfile"
+fi
+
+# Make sure that link to current day's log exists in index for current month.
+if ! grep "$dn.rst" "$mfile" > /dev/null; then
+   # No link to current day's log exists. Add link.
+   "$ECHO" "   $dn.rst" >> "$mfile"
+fi
+
+# Make sure that file containing log for current day exists.
+if ! test -f "$dfile"; then
+   # No file for current day's log exists. Start a new log for current day.
+   "$ECHO" -e "\n$dn ($ds)\n~~~~~~~~\n" > "$dfile"
+   git add "$dfile"
+fi
+
+# Edit file for current day.
+vim "$dfile"
+
