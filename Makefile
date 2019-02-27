@@ -4,23 +4,31 @@ DEPLOY := /var/www/catholicscience.org/html
 # Copy into html tree each non-'.md' file from wiki-src tree.
 html/%: wiki-src/%
 	@mkdir -p `dirname $@`
-	@if echo $< | grep '\.swp$$'; then\
-	  echo "skipping $<";\
-	else\
-	  cp -av $< $@;\
-	fi
+	@skip=false;\
+	 for i in '\.swp$$' '\.o$$'; do\
+	   if echo $< | grep "$$i" > /dev/null; then\
+	     echo "skipping '$<'";\
+	     skip=true;\
+	     break;\
+	   fi;\
+	 done;\
+	 if test "x$$skip" = "xfalse"; then\
+	   cp -av $< $@;\
+	 fi
 
 # Generate under html tree each '.html' from corresponding '.md'.
 html/%.html: wiki-src/%.md
 	@mkdir -p `dirname $@`
-	@# First, change link to md-file so that link is to corresponding
-	@# html-file.  Second, change link with no extension to link with
-	@# '.html' as extension.  Third, change diary-link with date-format but
-	@# no extension so that link is to corresponding html-file.
-	@sed 's/\.md)/.html/g' $<\
-	  | sed -E 's/\[([^[]+)\]\(([^.]+)\)/[\1](\2.html)/g'\
-	  | sed -E 's/([0-9]{4}-[0-9]{2}-[0-9]{2})\)/\1.html)/'\
-	  > tmp.md
+	@#
+	@# First, change each link to a file with '.md' as the extension so
+	@# that the link is to the corresponding file but with '.html' as the
+	@# extension.
+	@#
+	@# Second, change each link to a file with no extension so that the
+	@# link is to the corresponding file but with '.html' as the extension.
+	@sed -E 's/\[([^[]+)\]\((.+)\.md\)/[\1](\2.html)/g' $< | \
+	 sed -E 's/\[([^[]+)\]\(([^.]+)\)/[\1](\2.html)/g'       \
+	 > tmp.md
 	@# '--ascii' makes apostrophe in markdown source render as apostrophe
 	@# in html.
 	@pandoc --ascii --mathml -f markdown+smart -o $@ tmp.md
